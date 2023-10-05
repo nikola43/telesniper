@@ -1,0 +1,1 @@
+nodemon --exec go run main.go tgutils.go constants.go actions.go --signal SIGTERM            
