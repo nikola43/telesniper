@@ -7,6 +7,8 @@ const (
 	Start        = "/start"
 	ImportWallet = "import_wallet"
 	GenWallet    = "gen_wallet"
+	ShowMenu     = "show_menu"
+	Disconnect   = "disconnect"
 )
 
 var INPUT_CAPTIONS = map[string]string{

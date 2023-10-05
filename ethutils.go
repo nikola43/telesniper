@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func ImportAccount(pk string) {
+func ImportAccount(pk string) Account {
 
 	// create privateKey from string key
 	privateKey, privateKeyErr := crypto.HexToECDSA(pk)
@@ -37,13 +37,15 @@ func ImportAccount(pk string) {
 	hash.Write(publicKeyBytes[1:])
 	//fmt.Println(hexutil.Encode(hash.Sum(nil)[12:])) // 0x96216849c49358b10257cb55b28ea603c874b05e
 
-	account = Account{
+	account := Account{
 		Address:    common.HexToAddress(address).Hex(),
 		PrivateKey: pk,
 	}
+
+	return account
 }
 
-func GenerateWallet() {
+func GenerateWallet() Account {
 
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
@@ -69,8 +71,10 @@ func GenerateWallet() {
 	hash.Write(publicKeyBytes[1:])
 	fmt.Println(hexutil.Encode(hash.Sum(nil)[12:])) // 0x96216849c49358b10257cb55b28ea603c874b05e
 
-	account = Account{
+	account := Account{
 		Address:    common.HexToAddress(address).Hex(),
 		PrivateKey: hexutil.Encode(privateKeyBytes)[2:],
 	}
+
+	return account
 }

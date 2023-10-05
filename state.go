@@ -1,6 +1,7 @@
 package main
 
-var pk = ""
-var inputMode = ""
-var botMessageID = 0
-var account Account
+var state = map[string]interface{}{
+	"InputMode":    "",
+	"BotMessageID": 0,
+	"Account":      nil,
+}
