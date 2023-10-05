@@ -37,8 +37,8 @@ func ActionImportWallet(chatID int64, bot *telego.Bot) error {
 		return error
 	}
 
-	msgId := msg.MessageID
-	fmt.Println("msgId:", msgId)
+	botMessageID = msg.MessageID
+	inputMode = ImportWallet
 
 	return nil
 }

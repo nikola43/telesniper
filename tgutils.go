@@ -17,6 +17,20 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 		ActionStart(chatID, bot)
 	}
 
+	switch inputMode {
+	case ImportWallet:
+		ImportAccount(msgText)
+		txt := "Address: " + account.Address + "\n" + "Private Key: " + account.PrivateKey
+		msg, error := SendMessage(chatID, txt, nil, bot)
+		if error != nil {
+			return error
+		}
+		_ = msg
+	}
+
+	DeleteMessage(chatID, update.Message.MessageID, bot)
+	DeleteMessage(chatID, botMessageID, bot)
+
 	return nil
 }
 
@@ -89,8 +103,11 @@ func HandleCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
 	return nil
 }
 
-func DeleteMessage(params *telego.DeleteMessageParams, bot *telego.Bot) {
-	// Deleting message
+func DeleteMessage(chatID int64, msgId int, bot *telego.Bot) {
+	params := &telego.DeleteMessageParams{
+		ChatID:    telego.ChatID{ID: chatID},
+		MessageID: msgId,
+	}
 	err := bot.DeleteMessage(params)
 	if err != nil {
 		fmt.Println(err)

@@ -9,8 +9,7 @@ const (
 	GenWallet    = "gen_wallet"
 )
 
-// messages
-const (
-	ImportWalletMsg = "Are you sure you want to load wallet?"
-	GenWalletMsg    = "Are you sure you want to generate wallet?"
-)
+var INPUT_CAPTIONS = map[string]string{
+	ImportWallet: "Are you sure you want to load wallet?",
+	GenWallet:    "Are you sure you want to load wallet?",
+}
