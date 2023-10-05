@@ -6,7 +6,7 @@ import (
 
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
-	tgutil "github.com/nikola43/telesniper"
+	tgutil "github.com/nikola43/telesniper/utils"
 )
 
 // actions
