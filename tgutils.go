@@ -7,24 +7,6 @@ import (
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
-func HandleMessage(update telego.Update, bot *telego.Bot) error {
-	botMessageID := state["BotMessageID"].(int)
-	inputMode := state["InputMode"].(string)
-
-	chatID := update.Message.Chat.ID
-	msgText := update.Message.Text
-
-	switch msgText {
-	case Start:
-		ActionStart(chatID, bot)
-	}
-
-	HandleInput(inputMode, update, bot)
-	DeleteMessage(chatID, botMessageID, bot)
-
-	return nil
-}
-
 func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error {
 	chatID := update.Message.Chat.ID
 	msgText := update.Message.Text
@@ -54,15 +36,61 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 		}
 		_ = msg
 		state["Account"] = account
+
+	case AddToken:
+		if len(msgText) != 42 {
+			txt := "Invalid token address, please try again."
+			SendMessage(chatID, txt, nil, bot)
+			return nil
+		}
+
+		tokenConfig := TokenConfig{
+			Address: msgText,
+		}
+
+		state["TokenConfig"] = tokenConfig
 	}
 
-	DeleteMessage(chatID, update.Message.MessageID, bot)
+	err := DeleteMessage(chatID, update.Message.MessageID, bot)
+	if err != nil {
+		return err
+	}
 	return nil
-
 }
 
-/*
-func BuildMessage(chatId int64, msg string, btnLabels []string, callbacks []string, bot *telego.Bot) (*telego.Message, error) {
+func HandleCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
+	fmt.Println("Received callback with data:", callback.Data)
+	fmt.Println("Received callback with message:", callback.Message.Text)
+	fmt.Println("Received callback with chat id:", callback.Message.Chat.ID)
+
+	// get chat id
+	chatID := callback.Message.Chat.ID
+
+	if state["BotMessageID"] != nil {
+		err := DeleteMessage(chatID, state["BotMessageID"].(int), bot)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch callback.Data {
+	case ImportWallet:
+		ActionImportWallet(chatID, bot)
+	case GenWallet:
+		ActionGenWallet(chatID, bot)
+	case ShowMenu:
+		ActionShowMainMenu(chatID, bot)
+	case Disconnect:
+		ActionDisconnect(chatID, bot)
+	case Back:
+		ActionBack(chatID, bot)
+	case AddToken:
+		ActionAddToken(chatID, bot)
+	}
+	return nil
+}
+
+func BuildKeyboard(btnLabels []string, callbacks []string) telego.ReplyMarkup {
 	btns := make([][]telego.InlineKeyboardButton, 0)
 	for i := 0; i < len(btnLabels); i++ {
 		btns = append(btns, []telego.InlineKeyboardButton{
@@ -70,21 +98,29 @@ func BuildMessage(chatId int64, msg string, btnLabels []string, callbacks []stri
 		})
 	}
 
-	message := tu.Message(
-		tu.ID(chatId),
-		msg,
-	).WithReplyMarkup(tu.InlineKeyboard(
+	keyboard := tu.InlineKeyboard(
 		btns...,
-	))
-
-	// Sending message
-	res, err := bot.SendMessage(message)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	)
+	return keyboard
 }
-*/
+
+func HandleMessage(update telego.Update, bot *telego.Bot) error {
+	botMessageID := state["BotMessageID"].(int)
+	inputMode := state["InputMode"].(string)
+
+	chatID := update.Message.Chat.ID
+	msgText := update.Message.Text
+
+	switch msgText {
+	case Start:
+		ActionStart(chatID, bot)
+	}
+
+	HandleInput(inputMode, update, bot)
+	DeleteMessage(chatID, botMessageID, bot)
+
+	return nil
+}
 
 func SendMessage(chatId int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
 	var message *telego.SendMessageParams
@@ -110,49 +146,25 @@ func SendMessage(chatId int64, msg string, replyMarkup telego.ReplyMarkup, bot *
 	return res, nil
 }
 
-func HandleCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
-	fmt.Println("Received callback with data:", callback.Data)
-	fmt.Println("Received callback with message:", callback.Message.Text)
-	fmt.Println("Received callback with chat id:", callback.Message.Chat.ID)
-
-	// get chat id
-	chatID := callback.Message.Chat.ID
-
-	// replace message with callback data
-
-	switch callback.Data {
-	case ImportWallet:
-		ActionImportWallet(chatID, bot)
-		//HandleConfirm(Back, callbackQuery.Data, chatID, callbackQuery.Message.Text, bot)
-	case GenWallet:
-		ActionGenWallet(chatID, bot)
-
-	case ShowMenu:
-		ActionShowMainMenu(chatID, bot)
-
-	case Disconnect:
-		ActionDisconnect(chatID, bot)
-	case Back:
-		ActionBack(chatID, bot)
-	}
-
-	// send message with callback data
-	//SendMessage(chatID, callbackQuery.Message.Text, nil, bot)
-	return nil
-}
-
-func DeleteMessage(chatID int64, msgId int, bot *telego.Bot) {
+func DeleteMessage(chatID int64, msgId int, bot *telego.Bot) error {
 	params := &telego.DeleteMessageParams{
 		ChatID:    telego.ChatID{ID: chatID},
 		MessageID: msgId,
 	}
 	err := bot.DeleteMessage(params)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+	return nil
 }
 
-func HandleUpdates(updates <-chan telego.Update, bot *telego.Bot) error {
+func HandleUpdates(bot *telego.Bot) error {
+	updates, err := bot.UpdatesViaLongPolling(nil)
+	if err != nil {
+		return err
+	}
+	defer bot.StopLongPolling()
+
 	for update := range updates {
 		// handle messages
 		if update.Message != nil {
@@ -162,7 +174,7 @@ func HandleUpdates(updates <-chan telego.Update, bot *telego.Bot) error {
 			}
 		}
 
-		// handle callback
+		// handle button callback
 		if update.CallbackQuery != nil {
 			err := HandleCallback(update.CallbackQuery, bot)
 			if err != nil {

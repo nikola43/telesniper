@@ -9,9 +9,11 @@ const (
 	GenWallet    = "gen_wallet"
 	ShowMenu     = "show_menu"
 	Disconnect   = "disconnect"
+	AddToken     = "add_token"
 )
 
 var INPUT_CAPTIONS = map[string]string{
-	ImportWallet: "Are you sure you want to load wallet?",
-	GenWallet:    "Are you sure you want to load wallet?",
+	ImportWallet: "Paste your private key:",
+	GenWallet:    "Will generate a new wallet. Are you sure?",
+	AddToken:     "Paste token address:",
 }
