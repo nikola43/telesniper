@@ -1,0 +1,219 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/mymmrac/telego"
+	tu "github.com/mymmrac/telego/telegoutil"
+)
+
+/*
+	inlineKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow( // Row 1
+			tu.InlineKeyboardButton("Callback data button 1").WithCallbackData("callback_1"),
+			tu.InlineKeyboardButton("Callback data button 2").WithCallbackData("callback_2"),
+		),
+		tu.InlineKeyboardRow( // Row 2
+			tu.InlineKeyboardButton("URL button").WithURL("https://example.com"), // Column 1
+		),
+	)
+
+
+
+		/*
+		// Inline keyboard parameters
+		inlineKeyboard := tu.InlineKeyboard(
+			tu.InlineKeyboardRow( // Row 1
+				tu.InlineKeyboardButton("Callback data button 1"). // Column 1
+											WithCallbackData("callback_1"),
+				tu.InlineKeyboardButton("Callback data button 2"). // Column 2
+											WithCallbackData("callback_2"),
+			),
+			tu.InlineKeyboardRow( // Row 2
+				tu.InlineKeyboardButton("URL button").WithURL("https://example.com"), // Column 1
+			),
+		)
+*/
+
+/*
+	// loop for listen messages
+	// get chat id
+	// send message with inline keyboard
+	// get callback data
+	// send message with callback data
+
+	// Message parameters
+	message := tu.Message(
+		tu.ID(358896373),
+		"My message",
+	).WithReplyMarkup(inlineKeyboard)
+
+	// Sending message
+	_, _ = bot.SendMessage(message)
+*/
+
+// actions
+const (
+	Start      = "/start"
+	LoadWallet = "/load_wallet"
+	GenWallet  = "/gen_wallet"
+)
+
+func main() {
+	//botToken := os.Getenv("TOKEN")
+	botToken := "5931596960:AAEpkYhCtdUj6PQhZeDjMW-QOOYJMeEVShA"
+
+	// Note: Please keep in mind that default logger may expose sensitive information, use in development only
+	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	updates, _ := bot.UpdatesViaLongPolling(nil)
+	defer bot.StopLongPolling()
+
+	// Receiving callback data
+	for update := range updates {
+		var chatID int64
+
+		if update.Message != nil {
+			// get chat id
+			chatID = update.Message.Chat.ID
+
+			if update.Message != nil {
+				action := update.Message.Text
+				fmt.Println("Received message:", update.Message.Text)
+
+				switch action {
+				case Start:
+					fmt.Println("start")
+					msg := "Hi"
+					btnLabels := []string{"Load wallet", "Generate wallet"}
+					callbacks := []string{LoadWallet, GenWallet}
+					message, err := BuildMessage(chatID, msg, btnLabels, callbacks, bot)
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					fmt.Println("mss", message)
+				case LoadWallet:
+					fmt.Println("load wallet")
+				case GenWallet:
+					fmt.Println("gen wallet")
+				}
+			}
+		}
+
+		if update.CallbackQuery != nil {
+			HandleCallbackData(update.CallbackQuery, bot)
+		}
+
+		/*
+			// chat message
+			if update.Message != nil {
+				action := update.Message.Text
+				fmt.Println("Received message:", update.Message.Text)
+
+				switch action {
+				case Start:
+					fmt.Println("start")
+					msg := "Hi"
+					btnLabels := []string{"Load wallet", "Generate wallet"}
+					callbacks := []string{LoadWallet, GenWallet}
+					message, err := BuildMessage(chatID, msg, btnLabels, callbacks, bot)
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					handleCallbackData(message)
+
+					fmt.Println("mss", message)
+				case LoadWallet:
+					fmt.Println("load wallet")
+				case GenWallet:
+					fmt.Println("gen wallet")
+				}
+			}
+		*/
+	}
+}
+
+func HandleCallbackData(callback *telego.CallbackQuery, bot *telego.Bot) {
+	callbackQuery := callback
+	fmt.Println("Received callback with data:", callbackQuery.Data)
+	fmt.Println("Received callback with message:", callbackQuery.Message.Text)
+	fmt.Println("Received callback with chat id:", callbackQuery.Message.Chat.ID)
+
+	// get chat id
+	chatID := callbackQuery.Message.Chat.ID
+
+	// send message with callback data
+	msg := "Hi"
+	SendMessage(chatID, msg, nil, bot)
+}
+
+func SendMessage(chatId int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
+
+	if replyMarkup == nil {
+		message := tu.Message(
+			tu.ID(chatId),
+			msg,
+		).WithReplyMarkup(replyMarkup)
+
+		// Sending message
+		res, err := bot.SendMessage(message)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+
+	} else {
+		message := tu.Message(
+			tu.ID(chatId),
+			msg,
+		)
+
+		// Sending message
+		res, err := bot.SendMessage(message)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+}
+
+/*
+func BuildButtons() {
+}
+*/
+
+func BuildMessage(chatId int64, msg string, btnLabels []string, callbacks []string, bot *telego.Bot) (*telego.Message, error) {
+	btns := make([][]telego.InlineKeyboardButton, 0)
+	for i := 0; i < len(btnLabels); i++ {
+		btns = append(btns, []telego.InlineKeyboardButton{
+			tu.InlineKeyboardButton(btnLabels[i]).WithCallbackData(callbacks[i]),
+		})
+	}
+
+	inlineKeyboard := tu.InlineKeyboard(
+		btns...,
+	)
+
+	message := tu.Message(
+		tu.ID(chatId),
+		msg,
+	).WithReplyMarkup(inlineKeyboard)
+
+	// Sending message
+	res, err := bot.SendMessage(message)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func handleStartCommand() {
+
+}
