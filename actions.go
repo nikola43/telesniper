@@ -6,15 +6,12 @@ import (
 	"github.com/mymmrac/telego"
 )
 
-func ActionAddToken(chatID int64, bot *telego.Bot) error {
-
-	txt := INPUT_CAPTIONS[AddToken]
-	_, err := SendMessage(chatID, txt, nil, bot)
+func HandleAction(chatID int64, action string, bot *telego.Bot) error {
+	_, err := SendMessage(chatID, INPUT_CAPTIONS[action], nil, bot)
 	if err != nil {
 		return err
 	}
-
-	state["InputMode"] = AddToken
+	state[chatID]["InputMode"] = action
 	return nil
 }
 
@@ -36,38 +33,27 @@ func ActionStart(chatID int64, bot *telego.Bot) error {
 	return nil
 }
 
-func ActionImportWallet(chatID int64, bot *telego.Bot) error {
-
-	txt := INPUT_CAPTIONS[ImportWallet]
-	_, err := SendMessage(chatID, txt, nil, bot)
-	if err != nil {
-		return err
-	}
-
-	state["InputMode"] = ImportWallet
-	return nil
-}
-
 func ActionGenWallet(chatID int64, bot *telego.Bot) error {
-
 	account := GenerateWallet()
 	txt := "⚠️ Save your wallet ⚠️\n\n" + "Address: " + account.Address + "\n" + "Private Key: " + account.PrivateKey
-	state["Account"] = account
+	state[chatID]["Account"] = account
 
 	HandleConfirm(Start, ShowMenu, chatID, txt, bot)
 	return nil
 }
 
-func ActionShowMainMenu(chatID int64, bot *telego.Bot) error {
-
-	_, err := SendMessage(chatID, "Welcome", MAIN_MENU_KEYBOARD, bot)
+func HandleActionWithKeyboard(chatID int64, action string, bot *telego.Bot) error {
+	keyboard := KEYBOARDS[action]
+	_, err := SendMessage(chatID, "Welcome", keyboard, bot)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func ActionDisconnect(chatID int64, bot *telego.Bot) error {
+
+func ActionBack(chatID int64, bot *telego.Bot) error {
+	fmt.Println("start")
 
 	_, err := SendMessage(chatID, "welcome", nil, bot)
 	if err != nil {
@@ -83,6 +69,3 @@ func ActionDisconnect(chatID int64, bot *telego.Bot) error {
 	return nil
 }
 
-func ActionBack(chatID int64, bot *telego.Bot) {
-	DeleteMessage(chatID, state["BotMessageID"].(int), bot)
-}

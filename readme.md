@@ -1,3 +1,2 @@
 nodemon --exec go run main.go tgutils.go ethutils.go \
-constants.go actions.go state.go types.go keyboards.go \
---signal SIGTERM
+constants.go actions.go state.go types.go --signal SIGTERM

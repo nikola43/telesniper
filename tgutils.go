@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -12,6 +13,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	msgText := update.Message.Text
 
 	switch inputMode {
+	// --------------------- Wallet ---------------------
 	case ImportWallet:
 		if msgText[0:2] == "0x" {
 			msgText = msgText[2:]
@@ -24,9 +26,10 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 
 		account := ImportAccount(msgText)
 		txt := "Address: " + account.Address + "\n" + "Private Key: " + account.PrivateKey
-		state["Account"] = account
+		state[chatID]["Account"] = account
 		HandleConfirm(Start, ShowMenu, chatID, txt, bot)
 
+	// --------------------- GenWallet ---------------------
 	case GenWallet:
 		account := GenerateWallet()
 		txt := "Address: " + account.Address + "\n" + "Private Key: " + account.PrivateKey
@@ -35,8 +38,9 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 			return err
 		}
 		_ = msg
-		state["Account"] = account
+		state[chatID]["Account"] = account
 
+	// --------------------- AddToken ---------------------
 	case AddToken:
 		if len(msgText) != 42 {
 			txt := "Invalid token address, please try again."
@@ -48,7 +52,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 			Address: msgText,
 		}
 
-		state["TokenConfig"] = tokenConfig
+		state[chatID]["TokenConfig"] = tokenConfig
 	}
 
 	err := DeleteMessage(chatID, update.Message.MessageID, bot)
@@ -58,7 +62,7 @@ func HandleInput(inputMode string, update telego.Update, bot *telego.Bot) error 
 	return nil
 }
 
-func HandleCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
+func HandleButtonCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
 	fmt.Println("Received callback with data:", callback.Data)
 	fmt.Println("Received callback with message:", callback.Message.Text)
 	fmt.Println("Received callback with chat id:", callback.Message.Chat.ID)
@@ -66,26 +70,35 @@ func HandleCallback(callback *telego.CallbackQuery, bot *telego.Bot) error {
 	// get chat id
 	chatID := callback.Message.Chat.ID
 
-	if state["BotMessageID"] != nil {
-		err := DeleteMessage(chatID, state["BotMessageID"].(int), bot)
+	if state[chatID]["BotMessageID"] != nil {
+		err := DeleteMessage(chatID, state[chatID]["BotMessageID"].(int), bot)
 		if err != nil {
 			return err
 		}
 	}
 
+	// check fi callback data contais "back" word
+	isBack := strings.Contains(callback.Data, Back)
+	if isBack {
+		// check if callback data is back/..., if so, handle back
+		back := strings.Split(callback.Data, "/")[0]
+		path := strings.Split(callback.Data, "/")[1]
+		fmt.Println("back:", back)
+		fmt.Println("path:", path)
+		HandleBack(chatID, path, bot)
+	}
+
 	switch callback.Data {
 	case ImportWallet:
-		ActionImportWallet(chatID, bot)
+		HandleAction(chatID, ImportWallet, bot)
 	case GenWallet:
 		ActionGenWallet(chatID, bot)
 	case ShowMenu:
-		ActionShowMainMenu(chatID, bot)
+		HandleActionWithKeyboard(chatID, ShowMenu, bot)
 	case Disconnect:
-		ActionDisconnect(chatID, bot)
-	case Back:
-		ActionBack(chatID, bot)
+		HandleActionWithKeyboard(chatID, Start, bot)
 	case AddToken:
-		ActionAddToken(chatID, bot)
+		HandleAction(chatID, ImportWallet, bot)
 	}
 	return nil
 }
@@ -105,14 +118,27 @@ func BuildKeyboard(btnLabels []string, callbacks []string) telego.ReplyMarkup {
 }
 
 func HandleMessage(update telego.Update, bot *telego.Bot) error {
-	botMessageID := state["BotMessageID"].(int)
-	inputMode := state["InputMode"].(string)
 
 	chatID := update.Message.Chat.ID
 	msgText := update.Message.Text
 
+	if state[chatID] == nil {
+		state[chatID] = make(map[string]interface{})
+		state[chatID]["BotMessageID"] = 0
+		state[chatID]["InputMode"] = ""
+		state[chatID]["Account"] = nil
+	}
+	fmt.Println(state[chatID])
+
+	botMessageID := state[chatID]["BotMessageID"].(int)
+	inputMode := state[chatID]["InputMode"].(string)
+
 	switch msgText {
-	case Start:
+	case "/start":
+		_, err := SendMessage(chatID, "welcome", nil, bot)
+		if err != nil {
+			return err
+		}
 		ActionStart(chatID, bot)
 	}
 
@@ -122,17 +148,49 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 	return nil
 }
 
-func SendMessage(chatId int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
+/*
+/*
+func HandleMessage(update telego.Update, bot *telego.Bot) error {
+
+	chatID := update.Message.Chat.ID
+	msgText := update.Message.Text
+
+	if state[chatID] == nil {
+		state[chatID] = make(map[string]interface{})
+	}
+
+	inputMode, ok := state[chatID]["InputMode"].(string)
+	botMessageID, ok = state[chatID]["BotMessageID"].(int)
+
+
+	switch msgText {
+	case Start:
+		_, err := SendMessage(chatID, "welcome", nil, bot)
+		if err != nil {
+			return err
+		}
+		ActionStart(chatID, bot)
+	}
+
+	HandleInput(inputMode, update, bot)
+	//DeleteMessage(chatID, botMessageID, bot)
+
+	return nil
+}
+
+*/
+
+func SendMessage(chatID int64, msg string, replyMarkup telego.ReplyMarkup, bot *telego.Bot) (*telego.Message, error) {
 	var message *telego.SendMessageParams
 
 	if replyMarkup != nil {
 		message = tu.Message(
-			tu.ID(chatId),
+			tu.ID(chatID),
 			msg,
 		).WithReplyMarkup(replyMarkup)
 	} else {
 		message = tu.Message(
-			tu.ID(chatId),
+			tu.ID(chatID),
 			msg,
 		)
 	}
@@ -142,7 +200,7 @@ func SendMessage(chatId int64, msg string, replyMarkup telego.ReplyMarkup, bot *
 		return nil, err
 	}
 
-	state["BotMessageID"] = res.MessageID
+	state[chatID]["BotMessageID"] = res.MessageID
 	return res, nil
 }
 
@@ -176,13 +234,20 @@ func HandleUpdates(bot *telego.Bot) error {
 
 		// handle button callback
 		if update.CallbackQuery != nil {
-			err := HandleCallback(update.CallbackQuery, bot)
+			err := HandleButtonCallback(update.CallbackQuery, bot)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func HandleBack(chatID int64, backRoute string, bot *telego.Bot) {
+	switch backRoute {
+	case Start:
+		ActionStart(chatID, bot)
+	}
 }
 
 func HandleConfirm(backRoute, proceedRoute string, chatID int64, msg string, bot *telego.Bot) {
@@ -206,7 +271,7 @@ func HandleConfirm(backRoute, proceedRoute string, chatID int64, msg string, bot
 		fmt.Println(err)
 	}
 
-	state["BotMessageID"] = res.MessageID
+	state[chatID]["BotMessageID"] = res.MessageID
 	_ = res
 
 }

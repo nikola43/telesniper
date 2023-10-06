@@ -1,7 +1,3 @@
 package main
 
-var state = map[string]interface{}{
-	"InputMode":    "",
-	"BotMessageID": 0,
-	"Account":      nil,
-}
+var state = make(map[int64]map[string]interface{})
