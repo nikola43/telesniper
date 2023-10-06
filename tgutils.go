@@ -142,8 +142,10 @@ func HandleMessage(update telego.Update, bot *telego.Bot) error {
 		ActionStart(chatID, bot)
 	}
 
-	HandleInput(inputMode, update, bot)
-	DeleteMessage(chatID, botMessageID, bot)
+	if inputMode != "" {
+		HandleInput(inputMode, update, bot)
+		DeleteMessage(chatID, botMessageID, bot)
+	}
 
 	return nil
 }
